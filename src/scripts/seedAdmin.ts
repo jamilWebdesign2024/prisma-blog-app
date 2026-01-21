@@ -1,35 +1,49 @@
 import { prisma } from "../lib/prisma";
 import { UserRole } from "../middlewares/auth";
+import bcrypt from "bcrypt";
 
-async function seedAdmin(){
-    try{
-        const adminData = {
-            name: "Admin Saheb",
-            email: "admin@admin.com",
-            role: UserRole.ADMIN,
-            password: "admin1234"
-        }
-        //check user exist on db or not
-        const existingUser = await prisma.user.findUnique({
-            where: {
-                email: adminData.email
-            }
-        });
+async function seedAdmin() {
+  try {
+    const email = "jamiluddinjishan1@gmail.com";
 
-        if(existingUser){
-            throw new Error("User already exist!!")
-        }
+    // 1️⃣ Check if admin already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
 
-        const signUpAdmin = await fetch ("http://localhost:3000/api/auth/sign-up/email",{
-            method: "POST",
-            headers: {
-                "Content-type" : 'application/json'
-            },
-            body: JSON.stringify(adminData)
-        })
-
-    }catch(err){
-       console.error(err);
-        
+    if (existingUser) {
+      console.log("Admin already exists. Skipping seed.");
+      return;
     }
+
+    // 2️⃣ Hash password
+    const hashedPassword = await bcrypt.hash("admin1234", 10);
+
+    // 3️⃣ Create admin user
+    const admin = await prisma.user.create({
+      data: {
+        name: "Amin shaheb",
+        email: email,
+        password: hashedPassword,
+        role: UserRole.ADMIN, // This is an enum that will be converted to string
+        emailVerified: true,
+        status: "ACTIVE",
+      },
+    });
+
+    console.log("✅ Admin seeded successfully:");
+    console.log({
+      id: admin.id,
+      email: admin.email,
+      role: admin.role,
+    });
+
+  } catch (error) {
+    console.error("❌ Failed to seed admin:", error);
+  } finally {
+    await prisma.$disconnect();
+  }
 }
+
+// Run seed
+seedAdmin();
