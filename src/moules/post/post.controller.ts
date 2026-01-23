@@ -1,11 +1,11 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 // import { PostService } from "./post.service";
 import { PostStatus } from "../../../generated/prisma/enums";
 import paginationSortingHelper from "../../helpers/paginationSortingHelper";
 import { PostService } from "./post.service";
 import { UserRole } from "../../middlewares/auth";
 
-const createPost = async(req:Request, res:Response)=>{
+const createPost = async(req:Request, res:Response, next: NextFunction)=>{
     try{
       const user = req.user
 
@@ -18,10 +18,7 @@ const createPost = async(req:Request, res:Response)=>{
         const result = await PostService.createPost(req.body, user.id as string)
         res.status(201).json(result)
     }catch(err){
-      res.status(400).json({
-        error: "Post creation failed",
-        details: err
-      })
+      next(err);
     }
     
 }
@@ -102,7 +99,7 @@ const getMyPosts=async(req:Request, res:Response)=>{
 }
 
 
-const updatePost=async(req:Request, res:Response)=>{
+const updatePost=async(req:Request, res:Response, next:NextFunction)=>{
     try{
       const user = req.user;
       if(!user){
@@ -118,11 +115,7 @@ const updatePost=async(req:Request, res:Response)=>{
        
       res.status(200).json(result)
   }catch(err){
-      const errorMessage = (err instanceof Error )? err.message : "Post update failed"
-      res.status(400).json({
-        error: errorMessage,
-        details: err
-      })
+      next(err);
     }
 }
 
@@ -151,7 +144,20 @@ const deletePost=async(req:Request, res:Response)=>{
     }
 }
 
-
+const getStats=async(req:Request, res:Response)=>{
+    try{
+     
+      const result =await PostService.getStats();
+       
+      res.status(200).json(result)
+  }catch(err){
+      const errorMessage = (err instanceof Error )? err.message : "Stats fetched failed"
+      res.status(400).json({
+        error: errorMessage,
+        details: err
+      })
+    }
+}
 
 export const PostController = {
     createPost,
@@ -159,5 +165,6 @@ export const PostController = {
     getPostById,
     getMyPosts,
     updatePost,
-    deletePost
+    deletePost,
+    getStats
 }

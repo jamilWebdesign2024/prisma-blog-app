@@ -10,6 +10,12 @@ router.get(
     PostController.getAllPost
 )
 
+router.get(
+    "/stats",
+    auth(UserRole.ADMIN),
+    PostController.getStats
+)
+
 
 router.get(
     "/my-posts",
