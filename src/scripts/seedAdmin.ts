@@ -1,49 +1,75 @@
+// import { UserRole } from "../constants/enums/user.role.enum";
 import { prisma } from "../lib/prisma";
 import { UserRole } from "../middlewares/auth";
-import bcrypt from "bcrypt";
 
 async function seedAdmin() {
-  try {
-    const email = "jamiluddinjishan1@gmail.com";
+    try {
+        console.log("*** Admin seeding started");
+        const adminData = {
+            name: "admin seed",
+            email: "jamiluddinjishan7@gmail.com",
+            role: UserRole.ADMIN,
+            password: "admin1234"
+        }
 
-    // 1️⃣ Check if admin already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
+        //check user exist on DB or not
+        const isExistUser = await prisma.user.findUnique({
+            where: {
+                email: adminData.email as string
+            }
+        })
 
-    if (existingUser) {
-      console.log("Admin already exists. Skipping seed.");
-      return;
+        if (isExistUser) {
+            console.log("✅ User already exists. Skipping seed.");
+            return;
+        }
+        console.log("👤 user not found");
+        
+        // Use hardcoded URL instead of env variable
+        const authUrl = "http://localhost:3000/api/auth/sign-up/email";
+        console.log(`📍 Calling: ${authUrl}`);
+
+        const signUpAdmin = await fetch(authUrl, {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json",
+                "Origin": "http://localhost:4000"
+            },
+            body: JSON.stringify(adminData)
+        });
+
+        console.log(`📊 Response Status: ${signUpAdmin.status}`);
+        
+        const responseData = await signUpAdmin.json();
+        console.log("📋 Response Data:", responseData);
+
+        if (signUpAdmin.ok) {
+            console.log("✅ Admin created successfully");
+            await prisma.user.update({
+                where: {
+                    email: adminData.email as string
+                },
+                data: {
+                    emailVerified: true,
+                    role: UserRole.ADMIN
+                }
+            })
+            console.log("✅ Admin role updated successfully");
+            console.log("\n📧 Login Credentials:");
+            console.log("Email: jamiluddinjishan7@gmail.com");
+            console.log("Password: admin1234");
+        } else {
+            console.log("❌ Signup failed with status:", signUpAdmin.status);
+            console.log("Error:", responseData);
+        }
+
+    } catch (error) {
+        console.error("❌ Error:", error);
+    } finally {
+        await prisma.$disconnect();
     }
-
-    // 2️⃣ Hash password
-    const hashedPassword = await bcrypt.hash("admin1234", 10);
-
-    // 3️⃣ Create admin user
-    const admin = await prisma.user.create({
-      data: {
-        name: "Amin shaheb",
-        email: email,
-        password: hashedPassword,
-        role: UserRole.ADMIN, // This is an enum that will be converted to string
-        emailVerified: true,
-        status: "ACTIVE",
-      },
-    });
-
-    console.log("✅ Admin seeded successfully:");
-    console.log({
-      id: admin.id,
-      email: admin.email,
-      role: admin.role,
-    });
-
-  } catch (error) {
-    console.error("❌ Failed to seed admin:", error);
-  } finally {
-    await prisma.$disconnect();
-  }
 }
 
-// Run seed
-seedAdmin();
+seedAdmin()
+
+
